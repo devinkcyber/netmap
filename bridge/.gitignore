@@ -1,0 +1,5 @@
+# Never commit operator credentials or the built binary
+operator.cfg
+*.cfg
+*.pem
+netmap-sliver-bridge

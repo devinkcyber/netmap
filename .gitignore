@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+
+# Build output / caches
+dist/
+*.tsbuildinfo
+.vite/
+
+# Test / coverage output
+coverage/
+
+# Logs & runtime
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editor / OS cruft
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Claude Code — per-developer local settings (permissions etc.)
+.claude/settings.local.json
+
+# ---------------------------------------------------------------------------
+# Engagement data — this is a pentest tool. Keep real recon out of the repo.
+# The bundled demo (public/sample-scan.xml, bridge-vault/demo-vault/) is kept;
+# these patterns only catch scans/exports dropped at the repo root.
+# ---------------------------------------------------------------------------
+/scan*.xml
+/*.creds
+/creds*.csv
+/creds*.txt
+/vault/
+/vaults/

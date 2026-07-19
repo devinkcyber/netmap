@@ -1,0 +1,350 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<nmaprun scanner="nmap" args="nmap -sV -O --traceroute -oX scan.xml 10.10.0.0/24 10.20.10.0/24 10.30.10.0/24 10.30.20.0/24 10.31.0.0/24 172.16.20.0/24 192.168.100.0/24" start="1751200000" startstr="Sun Jun 29 10:26:40 2026" version="7.95" xmloutputversion="1.05">
+
+<!-- =========================================================================
+     A deliberately segmented enterprise, scanned from the management LAN.
+     Depth grows as you pivot inward (hop count in the traceroute tree):
+
+       scanner
+        └ gw-core (10.10.0.1)                     [mgmt LAN, 1 hop]
+           ├ dmz-fw (10.20.0.1)                   → DMZ            (3 hops)
+           ├ corp-rtr (10.30.0.1)                 → corp AD + WS   (3 hops)
+           │   └ sec-fw (10.31.0.1)               → secure enclave (4 hops)
+           └ siteb-vpn (172.16.0.1)
+               └ siteb-core (172.16.10.1)         → site-B servers (4 hops)
+                   └ ot-gw (172.16.30.1)          → OT / SCADA     (5 hops)
+
+     Routers with no <host> entry (10.20.0.1, 10.30.0.1, 10.31.0.1,
+     172.16.0.1, 172.16.10.1, 172.16.30.1) show up as router nodes.
+     ========================================================================= -->
+
+<!-- ===== 10.10.0.0/24 — management LAN (*.mgmt.lan), the scanner's own segment ===== -->
+<host starttime="1751200010" endtime="1751200120"><status state="up" reason="arp-response"/>
+<address addr="10.10.0.1" addrtype="ipv4"/><address addr="9C:C9:EB:12:34:56" addrtype="mac" vendor="Netgate"/>
+<hostnames><hostname name="gw-core.mgmt.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack"/><service name="domain" product="Unbound" version="1.19.3" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/><service name="http" product="nginx" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack"/><service name="https" product="nginx" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="22"><state state="filtered" reason="no-response"/><service name="ssh" method="table" conf="3"/></port>
+</ports>
+<os><osmatch name="pfSense 2.7 (FreeBSD 14.0)" accuracy="96"/></os>
+<trace port="443" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.30" host="gw-core.mgmt.lan"/></trace>
+</host>
+<host starttime="1751200010" endtime="1751200130"><status state="up" reason="arp-response"/>
+<address addr="10.10.0.10" addrtype="ipv4"/><address addr="52:54:00:AB:11:22" addrtype="mac" vendor="QEMU virtual NIC"/>
+<hostnames><hostname name="jumpbox.mgmt.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack"/><service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack"/><service name="ms-wbt-server" product="xrdp" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 6.8 (Ubuntu 24.04)" accuracy="96"/></os>
+<trace port="22" proto="tcp"><hop ttl="1" ipaddr="10.10.0.10" rtt="0.40" host="jumpbox.mgmt.lan"/></trace>
+</host>
+<host starttime="1751200010" endtime="1751200140"><status state="up" reason="arp-response"/>
+<address addr="10.10.0.20" addrtype="ipv4"/><address addr="D8:BB:C1:44:55:66" addrtype="mac" vendor="Micro-Star INTL"/>
+<hostnames><hostname name="mgmt-ws.mgmt.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack"/><service name="netbios-ssn" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack"/><service name="ms-wbt-server" product="Microsoft Terminal Services" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows 11 23H2" accuracy="96"/></os>
+<trace port="445" proto="tcp"><hop ttl="1" ipaddr="10.10.0.20" rtt="0.35" host="mgmt-ws.mgmt.lan"/></trace>
+</host>
+<host starttime="1751200010" endtime="1751200150"><status state="up" reason="arp-response"/>
+<address addr="10.10.0.30" addrtype="ipv4"/><address addr="00:0C:29:AA:BB:CC" addrtype="mac" vendor="VMware"/>
+<hostnames><hostname name="monitor.mgmt.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack"/><service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3000"><state state="open" reason="syn-ack"/><service name="http" product="Grafana" version="11.1" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="9090"><state state="open" reason="syn-ack"/><service name="http" product="Prometheus" version="2.53" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 6.8 (Ubuntu 24.04)" accuracy="95"/></os>
+<trace port="3000" proto="tcp"><hop ttl="1" ipaddr="10.10.0.30" rtt="0.44" host="monitor.mgmt.lan"/></trace>
+</host>
+
+<!-- ===== 10.20.10.0/24 — DMZ (*.dmz.example.com), via gw-core → dmz-fw (10.20.0.1) ===== -->
+<host starttime="1751200210" endtime="1751200300"><status state="up" reason="echo-reply"/>
+<address addr="10.20.10.10" addrtype="ipv4"/>
+<hostnames><hostname name="web01.dmz.example.com" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack"/><service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/><service name="http" product="nginx" version="1.24.0" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack"/><service name="https" product="nginx" version="1.24.0" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 5.15 - 6.8" accuracy="94"/></os>
+<trace port="443" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.20.0.1" rtt="0.80"/><hop ttl="3" ipaddr="10.20.10.10" rtt="1.05" host="web01.dmz.example.com"/></trace>
+</host>
+<host starttime="1751200210" endtime="1751200310"><status state="up" reason="echo-reply"/>
+<address addr="10.20.10.11" addrtype="ipv4"/>
+<hostnames><hostname name="web02.dmz.example.com" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/><service name="http" product="Caddy" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack"/><service name="https" product="Caddy" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack"/><service name="http-proxy" method="table" conf="3"/></port>
+</ports>
+<os><osmatch name="Linux 5.15 - 6.8" accuracy="93"/></os>
+<trace port="443" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.20.0.1" rtt="0.82"/><hop ttl="3" ipaddr="10.20.10.11" rtt="1.09" host="web02.dmz.example.com"/></trace>
+</host>
+<host starttime="1751200210" endtime="1751200320"><status state="up" reason="echo-reply"/>
+<address addr="10.20.10.20" addrtype="ipv4"/>
+<hostnames><hostname name="mail.dmz.example.com" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="25"><state state="open" reason="syn-ack"/><service name="smtp" product="Postfix smtpd" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="143"><state state="open" reason="syn-ack"/><service name="imap" product="Dovecot imapd" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="587"><state state="open" reason="syn-ack"/><service name="smtp" product="Postfix smtpd" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="993"><state state="open" reason="syn-ack"/><service name="imaps" product="Dovecot imapd" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 6.1 (Debian 12)" accuracy="94"/></os>
+<trace port="25" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.20.0.1" rtt="0.79"/><hop ttl="3" ipaddr="10.20.10.20" rtt="1.14" host="mail.dmz.example.com"/></trace>
+</host>
+<host starttime="1751200210" endtime="1751200330"><status state="up" reason="echo-reply"/>
+<address addr="10.20.10.30" addrtype="ipv4"/>
+<hostnames><hostname name="proxy.dmz.example.com" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/><service name="http" product="HAProxy http proxy" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3128"><state state="open" reason="syn-ack"/><service name="http-proxy" product="Squid http proxy" version="6.6" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 5.15 (Alpine)" accuracy="90"/></os>
+<trace port="3128" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.20.0.1" rtt="0.83"/><hop ttl="3" ipaddr="10.20.10.30" rtt="1.20" host="proxy.dmz.example.com"/></trace>
+</host>
+
+<!-- ===== 10.30.10.0/24 — corporate AD (*.corp.lan), via gw-core → corp-rtr (10.30.0.1) ===== -->
+<host starttime="1751200340" endtime="1751200440"><status state="up" reason="echo-reply"/>
+<address addr="10.30.10.5" addrtype="ipv4"/>
+<hostnames><hostname name="dc01.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack"/><service name="domain" product="Simple DNS Plus" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="88"><state state="open" reason="syn-ack"/><service name="kerberos-sec" product="Microsoft Windows Kerberos" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack"/><service name="netbios-ssn" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="389"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="464"><state state="open" reason="syn-ack"/><service name="kpasswd5" method="table" conf="3"/></port>
+<port protocol="tcp" portid="636"><state state="open" reason="syn-ack"/><service name="ldapssl" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3268"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3269"><state state="open" reason="syn-ack"/><service name="ldapssl" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack"/><service name="http" product="Microsoft HTTPAPI" version="2.0" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="9389"><state state="open" reason="syn-ack"/><service name="mc-nmf" product="Microsoft Active Directory Web Services" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2019" accuracy="95"/></os>
+<trace port="389" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.95"/><hop ttl="3" ipaddr="10.30.10.5" rtt="1.30" host="dc01.corp.lan"/></trace>
+</host>
+<host starttime="1751200340" endtime="1751200450"><status state="up" reason="echo-reply"/>
+<address addr="10.30.10.6" addrtype="ipv4"/>
+<hostnames><hostname name="dc02.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack"/><service name="domain" product="Simple DNS Plus" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="88"><state state="open" reason="syn-ack"/><service name="kerberos-sec" product="Microsoft Windows Kerberos" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="389"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="636"><state state="open" reason="syn-ack"/><service name="ldapssl" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3268"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack"/><service name="http" product="Microsoft HTTPAPI" version="2.0" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2022" accuracy="94"/></os>
+<trace port="389" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.96"/><hop ttl="3" ipaddr="10.30.10.6" rtt="1.33" host="dc02.corp.lan"/></trace>
+</host>
+<host starttime="1751200340" endtime="1751200460"><status state="up" reason="echo-reply"/>
+<address addr="10.30.10.10" addrtype="ipv4"/>
+<hostnames><hostname name="fs01.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack"/><service name="netbios-ssn" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" product="Microsoft Windows Server 2022 microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack"/><service name="http" product="Microsoft HTTPAPI" version="2.0" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2022" accuracy="93"/></os>
+<trace port="445" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.94"/><hop ttl="3" ipaddr="10.30.10.10" rtt="1.28" host="fs01.corp.lan"/></trace>
+</host>
+<host starttime="1751200340" endtime="1751200470"><status state="up" reason="echo-reply"/>
+<address addr="10.30.10.15" addrtype="ipv4"/>
+<hostnames><hostname name="sql01.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="1433"><state state="open" reason="syn-ack"/><service name="ms-sql-s" product="Microsoft SQL Server 2019" version="15.00.4345" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack"/><service name="http" product="Microsoft HTTPAPI" version="2.0" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2019" accuracy="94"/></os>
+<trace port="1433" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.97"/><hop ttl="3" ipaddr="10.30.10.15" rtt="1.41" host="sql01.corp.lan"/></trace>
+</host>
+<host starttime="1751200340" endtime="1751200480"><status state="up" reason="echo-reply"/>
+<address addr="10.30.10.20" addrtype="ipv4"/>
+<hostnames><hostname name="exch01.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="25"><state state="open" reason="syn-ack"/><service name="smtp" product="Microsoft Exchange smtpd" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack"/><service name="https" product="Microsoft Exchange OWA" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="587"><state state="open" reason="syn-ack"/><service name="smtp" product="Microsoft Exchange smtpd" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2019" accuracy="93"/></os>
+<trace port="443" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.95"/><hop ttl="3" ipaddr="10.30.10.20" rtt="1.37" host="exch01.corp.lan"/></trace>
+</host>
+<host starttime="1751200340" endtime="1751200485"><status state="down" reason="no-response"/>
+<address addr="10.30.10.99" addrtype="ipv4"/>
+</host>
+
+<!-- ===== 10.30.20.0/24 — corporate workstations (*.corp.lan), same corp-rtr (10.30.0.1) ===== -->
+<host starttime="1751200490" endtime="1751200560"><status state="up" reason="echo-reply"/>
+<address addr="10.30.20.50" addrtype="ipv4"/>
+<hostnames><hostname name="ws-hr.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack"/><service name="netbios-ssn" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows 11 23H2" accuracy="95"/></os>
+<trace port="445" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.98"/><hop ttl="3" ipaddr="10.30.20.50" rtt="1.45" host="ws-hr.corp.lan"/></trace>
+</host>
+<host starttime="1751200490" endtime="1751200570"><status state="up" reason="echo-reply"/>
+<address addr="10.30.20.51" addrtype="ipv4"/>
+<hostnames><hostname name="ws-fin.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack"/><service name="netbios-ssn" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack"/><service name="ms-wbt-server" product="Microsoft Terminal Services" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows 11 23H2" accuracy="95"/></os>
+<trace port="3389" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.99"/><hop ttl="3" ipaddr="10.30.20.51" rtt="1.49" host="ws-fin.corp.lan"/></trace>
+</host>
+<host starttime="1751200490" endtime="1751200580"><status state="up" reason="echo-reply"/>
+<address addr="10.30.20.60" addrtype="ipv4"/>
+<hostnames><hostname name="ws-admin.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack"/><service name="netbios-ssn" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack"/><service name="ms-wbt-server" product="Microsoft Terminal Services" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack"/><service name="http" product="Microsoft HTTPAPI" version="2.0" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows 11 23H2" accuracy="95"/></os>
+<trace port="5985" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="1.00"/><hop ttl="3" ipaddr="10.30.20.60" rtt="1.53" host="ws-admin.corp.lan"/></trace>
+</host>
+
+<!-- ===== 10.31.0.0/24 — secure enclave (*.sec.corp.lan), nested behind corp-rtr → sec-fw (10.31.0.1) ===== -->
+<host starttime="1751200600" endtime="1751200700"><status state="up" reason="echo-reply"/>
+<address addr="10.31.0.5" addrtype="ipv4"/>
+<hostnames><hostname name="dc-sec.sec.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack"/><service name="domain" product="Simple DNS Plus" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="88"><state state="open" reason="syn-ack"/><service name="kerberos-sec" product="Microsoft Windows Kerberos" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="389"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="636"><state state="open" reason="syn-ack"/><service name="ldapssl" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3268"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2022" accuracy="94"/></os>
+<trace port="389" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.96"/><hop ttl="3" ipaddr="10.31.0.1" rtt="1.70"/><hop ttl="4" ipaddr="10.31.0.5" rtt="2.15" host="dc-sec.sec.corp.lan"/></trace>
+</host>
+<host starttime="1751200600" endtime="1751200710"><status state="up" reason="echo-reply"/>
+<address addr="10.31.0.10" addrtype="ipv4"/>
+<hostnames><hostname name="pki.sec.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="443"><state state="open" reason="syn-ack"/><service name="https" product="Microsoft AD CS web enrollment" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5985"><state state="open" reason="syn-ack"/><service name="http" product="Microsoft HTTPAPI" version="2.0" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2019" accuracy="93"/></os>
+<trace port="443" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.96"/><hop ttl="3" ipaddr="10.31.0.1" rtt="1.72"/><hop ttl="4" ipaddr="10.31.0.10" rtt="2.24" host="pki.sec.corp.lan"/></trace>
+</host>
+<host starttime="1751200600" endtime="1751200720"><status state="up" reason="echo-reply"/>
+<address addr="10.31.0.20" addrtype="ipv4"/>
+<hostnames><hostname name="vault.sec.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack"/><service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="8200"><state state="open" reason="syn-ack"/><service name="https" product="HashiCorp Vault" version="1.16" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 6.8 (Ubuntu 24.04)" accuracy="94"/></os>
+<trace port="8200" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="10.30.0.1" rtt="0.96"/><hop ttl="3" ipaddr="10.31.0.1" rtt="1.68"/><hop ttl="4" ipaddr="10.31.0.20" rtt="2.30" host="vault.sec.corp.lan"/></trace>
+</host>
+
+<!-- ===== 172.16.20.0/24 — site-B servers (*.siteb.corp.lan), via siteb-vpn (172.16.0.1) → siteb-core (172.16.10.1) ===== -->
+<host starttime="1751200730" endtime="1751200830"><status state="up" reason="echo-reply"/>
+<address addr="172.16.20.5" addrtype="ipv4"/>
+<hostnames><hostname name="dc-b.siteb.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="53"><state state="open" reason="syn-ack"/><service name="domain" product="Simple DNS Plus" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="88"><state state="open" reason="syn-ack"/><service name="kerberos-sec" product="Microsoft Windows Kerberos" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="389"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3268"><state state="open" reason="syn-ack"/><service name="ldap" product="Microsoft Windows Active Directory LDAP" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2019" accuracy="94"/></os>
+<trace port="389" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="172.16.0.1" rtt="4.20"/><hop ttl="3" ipaddr="172.16.10.1" rtt="4.85"/><hop ttl="4" ipaddr="172.16.20.5" rtt="5.30" host="dc-b.siteb.corp.lan"/></trace>
+</host>
+<host starttime="1751200730" endtime="1751200840"><status state="up" reason="echo-reply"/>
+<address addr="172.16.20.10" addrtype="ipv4"/>
+<hostnames><hostname name="fs-b.siteb.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack"/><service name="ssh" product="OpenSSH" version="9.2p1 Debian" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="139"><state state="open" reason="syn-ack"/><service name="netbios-ssn" product="Samba smbd" version="4.19" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="netbios-ssn" product="Samba smbd" version="4.19" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 6.1 (Debian 12)" accuracy="94"/></os>
+<trace port="445" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="172.16.0.1" rtt="4.22"/><hop ttl="3" ipaddr="172.16.10.1" rtt="4.88"/><hop ttl="4" ipaddr="172.16.20.10" rtt="5.40" host="fs-b.siteb.corp.lan"/></trace>
+</host>
+<host starttime="1751200730" endtime="1751200850"><status state="up" reason="echo-reply"/>
+<address addr="172.16.20.15" addrtype="ipv4"/>
+<hostnames><hostname name="app-b.siteb.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="22"><state state="open" reason="syn-ack"/><service name="ssh" product="OpenSSH" version="9.6p1 Ubuntu" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="8080"><state state="open" reason="syn-ack"/><service name="http" product="Apache Tomcat" version="10.1" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="8443"><state state="open" reason="syn-ack"/><service name="https" product="Apache Tomcat" version="10.1" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Linux 6.8 (Ubuntu 24.04)" accuracy="93"/></os>
+<trace port="8080" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="172.16.0.1" rtt="4.19"/><hop ttl="3" ipaddr="172.16.10.1" rtt="4.90"/><hop ttl="4" ipaddr="172.16.20.15" rtt="5.55" host="app-b.siteb.corp.lan"/></trace>
+</host>
+
+<!-- ===== 192.168.100.0/24 — OT / SCADA (*.ot.corp.lan), deepest: siteb-core → ot-gw (172.16.30.1) ===== -->
+<host starttime="1751200860" endtime="1751200960"><status state="up" reason="echo-reply"/>
+<address addr="192.168.100.10" addrtype="ipv4"/>
+<hostnames><hostname name="hmi01.ot.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/><service name="http" product="Iconics GENESIS64" method="table" conf="3"/></port>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack"/><service name="ms-wbt-server" product="Microsoft Terminal Services" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="5900"><state state="open" reason="syn-ack"/><service name="vnc" product="RealVNC" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows 7 (embedded)" accuracy="88"/></os>
+<trace port="5900" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="172.16.0.1" rtt="4.21"/><hop ttl="3" ipaddr="172.16.10.1" rtt="4.86"/><hop ttl="4" ipaddr="172.16.30.1" rtt="6.40"/><hop ttl="5" ipaddr="192.168.100.10" rtt="7.10" host="hmi01.ot.corp.lan"/></trace>
+</host>
+<host starttime="1751200860" endtime="1751200970"><status state="up" reason="echo-reply"/>
+<address addr="192.168.100.20" addrtype="ipv4"/>
+<hostnames><hostname name="plc01.ot.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="80"><state state="open" reason="syn-ack"/><service name="http" product="Siemens SIMATIC S7 web" method="table" conf="3"/></port>
+<port protocol="tcp" portid="102"><state state="open" reason="syn-ack"/><service name="iso-tsap" product="Siemens S7 PLC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="502"><state state="open" reason="syn-ack"/><service name="modbus" product="Modbus TCP" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Siemens embedded" accuracy="80"/></os>
+<trace port="102" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="172.16.0.1" rtt="4.20"/><hop ttl="3" ipaddr="172.16.10.1" rtt="4.87"/><hop ttl="4" ipaddr="172.16.30.1" rtt="6.42"/><hop ttl="5" ipaddr="192.168.100.20" rtt="7.30" host="plc01.ot.corp.lan"/></trace>
+</host>
+<host starttime="1751200860" endtime="1751200980"><status state="up" reason="echo-reply"/>
+<address addr="192.168.100.30" addrtype="ipv4"/>
+<hostnames><hostname name="historian.ot.corp.lan" type="PTR"/></hostnames>
+<ports>
+<port protocol="tcp" portid="135"><state state="open" reason="syn-ack"/><service name="msrpc" product="Microsoft Windows RPC" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="445"><state state="open" reason="syn-ack"/><service name="microsoft-ds" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="1433"><state state="open" reason="syn-ack"/><service name="ms-sql-s" product="Microsoft SQL Server 2016" version="13.00.5026" method="probed" conf="10"/></port>
+<port protocol="tcp" portid="3389"><state state="open" reason="syn-ack"/><service name="ms-wbt-server" product="Microsoft Terminal Services" method="probed" conf="10"/></port>
+</ports>
+<os><osmatch name="Microsoft Windows Server 2016" accuracy="90"/></os>
+<trace port="1433" proto="tcp"><hop ttl="1" ipaddr="10.10.0.1" rtt="0.31" host="gw-core.mgmt.lan"/><hop ttl="2" ipaddr="172.16.0.1" rtt="4.20"/><hop ttl="3" ipaddr="172.16.10.1" rtt="4.89"/><hop ttl="4" ipaddr="172.16.30.1" rtt="6.44"/><hop ttl="5" ipaddr="192.168.100.30" rtt="7.55" host="historian.ot.corp.lan"/></trace>
+</host>
+<host starttime="1751200860" endtime="1751200985"><status state="down" reason="no-response"/>
+<address addr="192.168.100.99" addrtype="ipv4"/>
+</host>
+
+<runstats><finished time="1751201000" timestr="Sun Jun 29 10:43:20 2026" summary="Nmap done: 7 subnets scanned; 27 IP addresses (25 hosts up) scanned in 1000.00 seconds" elapsed="1000"/><hosts up="25" down="2" total="27"/></runstats>
+</nmaprun>

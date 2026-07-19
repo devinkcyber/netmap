@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    name: web (lint · test · build)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  bridges:
+    name: go bridges (vet · build)
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        module: [bridge, bridge-vault]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+          cache: false
+      - name: vet
+        working-directory: ${{ matrix.module }}
+        run: go vet ./...
+      - name: build
+        working-directory: ${{ matrix.module }}
+        run: go build ./...

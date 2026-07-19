@@ -1,0 +1,111 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---- design tokens ---- */
+@theme {
+  --font-sans: 'IBM Plex Sans Variable', system-ui, sans-serif;
+  --font-display: 'IBM Plex Sans Variable', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Nudge the smallest "informational" text up ~1px for readability (default xs is 12px). */
+  --text-xs: 0.8125rem; /* 13px */
+
+  --color-app: var(--app);
+  --color-panel: var(--panel);
+  --color-well: var(--well);
+  --color-raise: var(--raise);
+  --color-line: var(--line);
+  --color-ink-1: var(--ink-1);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--acc); /* theme-aware amber */
+  --color-ok: #3fdd83;
+  --color-warn: #f0b400;
+  --color-danger: #ff5555;
+}
+
+/* light — "paper terminal": warm off-white, dark ink, dark-amber accent */
+:root {
+  --app: #edeae3;
+  --panel: #f6f4ee;
+  --well: #e4e0d7;
+  --raise: #dbd6cb;
+  --line: #c6bfb0;
+  --ink-1: #080604;
+  --ink-2: #241f18;
+  --ink-3: #47402f;
+  --acc: #a85f00;
+  color-scheme: light;
+}
+
+/* dark — "operator terminal": near-black, hairline lines, amber accent */
+.dark {
+  --app: #07080a;
+  --panel: #0c0e12;
+  --well: #040507;
+  --raise: #161a20;
+  --line: #222932;
+  --ink-1: #ffffff;
+  --ink-2: #dbe4ee;
+  --ink-3: #a7b1bd;
+  --acc: #ffb000;
+  color-scheme: dark;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- small component classes ---- */
+.btn {
+  @apply rounded-none border border-line bg-transparent px-2.5 py-1.5 font-mono text-[11px] uppercase tracking-wide text-ink-2 transition-colors hover:border-ink-3 hover:bg-raise hover:text-ink-1 disabled:cursor-not-allowed disabled:opacity-40;
+}
+.btn-primary {
+  @apply rounded-none border border-accent/60 bg-accent/15 px-2.5 py-1.5 font-mono text-[11px] font-medium uppercase tracking-wide text-accent transition-colors hover:bg-accent/25 disabled:cursor-not-allowed disabled:opacity-40;
+}
+.btn-mini {
+  @apply rounded-none border border-transparent px-1.5 py-0.5 font-mono text-[10px] uppercase text-ink-3 transition-colors hover:bg-raise hover:text-ink-1;
+}
+.btn-mini-active {
+  @apply border-accent/50 bg-accent/15 text-accent;
+}
+.select {
+  @apply appearance-none rounded-none border border-line bg-well py-1.5 pl-2 pr-7 text-xs text-ink-1 focus:border-accent focus:outline-none;
+  /* Custom chevron so we control its inset from the right edge (the native arrow sits flush). */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%236d6453' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 0.65rem;
+}
+.dark .select {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6' fill='none' stroke='%2367717d' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M1 1l4 4 4-4'/%3E%3C/svg%3E");
+}
+
+/* ---- rendered note ---- */
+.prose-note {
+  @apply text-[13px] leading-relaxed text-ink-1;
+}
+.prose-note h1 { @apply mb-2 mt-1 font-display text-lg font-semibold; }
+.prose-note h2 { @apply mb-1.5 mt-4 text-[15px] font-semibold; }
+.prose-note h3 { @apply mb-1 mt-3 text-sm font-semibold; }
+.prose-note p { @apply mb-2; }
+.prose-note ul { @apply mb-2 list-disc pl-5; }
+.prose-note ol { @apply mb-2 list-decimal pl-5; }
+.prose-note code { @apply rounded-none bg-well px-1 py-0.5 font-mono text-[11px]; }
+.prose-note pre { @apply mb-2 overflow-x-auto rounded-none bg-well p-2; }
+.prose-note pre code { @apply bg-transparent p-0; }
+.prose-note table { @apply mb-2 w-full border-collapse font-mono text-[11px]; }
+.prose-note th, .prose-note td { @apply border border-line px-2 py-1 text-left; }
+.prose-note th { @apply bg-well font-medium; }
+.prose-note blockquote { @apply mb-2 border-l-2 border-line pl-3 text-ink-2; }
+.prose-note a { @apply text-accent underline decoration-accent/40 underline-offset-2 hover:decoration-accent; }
+.prose-note a.wikilink { @apply cursor-pointer no-underline; }
+.prose-note a.wikilink::before { content: '[['; @apply text-accent/50; }
+.prose-note a.wikilink::after { content: ']]'; @apply text-accent/50; }
+.prose-note hr { @apply my-3 border-line; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
+}

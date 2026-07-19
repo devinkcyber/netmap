@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <!--
+      Content-Security-Policy: netmap is fully self-contained. Scripts/styles are
+      its own bundle (inline needed for Vite dev + Tailwind); images are same-origin,
+      pasted (blob:) or embedded (data:) — remote images in notes are blocked as an
+      anti-exfiltration measure; the only network connection is the loopback Sliver
+      bridge WebSocket (and Vite's HMR socket in dev).
+    -->
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; object-src 'none'; base-uri 'self'"
+    />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>netmap · nmap topology + Obsidian notes</title>
+    <meta
+      name="description"
+      content="Turn an nmap scan into an interactive network map, with your Obsidian notes attached to every host. Client-side, offline, no backend."
+    />
+    <!-- Social preview (Open Graph + Twitter) for the live-demo link. Absolute URLs so scrapers
+         resolve them; the image is served from the repo's raw host. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="netmap — nmap topology + Obsidian notes" />
+    <meta property="og:description" content="Turn an nmap scan into an interactive network map, with your Obsidian notes attached to every host." />
+    <meta property="og:url" content="https://devinkcyber.github.io/netmap/" />
+    <meta property="og:image" content="https://raw.githubusercontent.com/devinkcyber/netmap/main/docs/screenshot.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="netmap — nmap topology + Obsidian notes" />
+    <meta name="twitter:description" content="Turn an nmap scan into an interactive network map, with your Obsidian notes attached to every host." />
+    <meta name="twitter:image" content="https://raw.githubusercontent.com/devinkcyber/netmap/main/docs/screenshot.png" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
