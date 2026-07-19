@@ -15,9 +15,7 @@ client-side and offline.
 Built for pentesters and red-teamers who live in nmap + Obsidian and want their
 recon to be visual and their notes one click away.
 
-![netmap rendering the demo network as an interactive traceroute topology — a scanner-rooted tree of hosts colored by subnet, with domain controllers, a Ligolo pivot path, and live Sliver implants](docs/map_shot.png)
-
-<sub>Hosts colored by subnet · gold-ringed hexagons are domain controllers · the dashed magenta path is a Ligolo pivot unlocking the `10.31.0.0/24` secure enclave · ringed nodes carry live Sliver sessions/beacons.</sub>
+![netmap: the demo network as an interactive graph, with a selected host's panel open — AD role, OS fingerprint, an open-ports table, and a one-click BloodHound deep-link](docs/screenshot.png)
 
 ## Quick start
 
@@ -56,6 +54,10 @@ grouping; without `-O`/`-sV`, hosts are colored "Unknown" and the ports table
 shows fewer columns.
 
 ## Features
+
+![The same engagement as a pure topology view — a scanner-rooted traceroute tree, hosts colored by subnet, gold-ringed domain controllers, and a Ligolo pivot path](docs/map_shot.png)
+
+<sub>Hosts colored by subnet · gold-ringed hexagons are domain controllers · the dashed magenta path is a Ligolo pivot unlocking the `10.31.0.0/24` secure enclave · ringed nodes carry live Sliver sessions/beacons.</sub>
 
 - **Interactive topology** — force / concentric / tree layouts, fit, reset,
   arrow-key navigation, shift-drag to move a whole subnet, search (`/`), PNG
