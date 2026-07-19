@@ -142,8 +142,7 @@ adapts to your BloodHound version and host. Logic lives in
 
 ### Sliver C2 — live implant overlay (optional)
 
-<!-- GIF: add docs/sliver.gif, then uncomment the line below -->
-<!-- ![Sliver sessions and beacons lighting up hosts on the map, with a live beacon check-in countdown](docs/sliver.gif) -->
+![Sliver sessions and beacons lighting up hosts on the map, with a live beacon check-in countdown](docs/sliver.gif)
 
 netmap can overlay live [Sliver](https://github.com/BishopFox/sliver) implant
 state onto the map: sessions and beacons light up the hosts they run on, and each
