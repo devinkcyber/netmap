@@ -63,9 +63,9 @@ function loadLigoloTargets(): Record<string, string[]> {
 }
 
 const defaultSettings: Settings = {
-  topologyMode: 'subnet',
-  layout: 'cose',
-  colorBy: 'os',
+  topologyMode: 'trace',
+  layout: 'breadthfirst',
+  colorBy: 'subnet',
   mask: 24,
   theme: 'dark',
   hostsFolder: 'Network/Hosts',
@@ -137,7 +137,7 @@ interface AppState extends Settings {
 
 const savedSettings = loadJson<Settings>(SETTINGS_KEY, defaultSettings);
 // Guard against settings persisted by older versions (e.g. colorBy: 'ports', sizeBy).
-if (!['os', 'ad', 'domain', 'subnet'].includes(savedSettings.colorBy)) savedSettings.colorBy = 'os';
+if (!['os', 'ad', 'domain', 'subnet'].includes(savedSettings.colorBy)) savedSettings.colorBy = defaultSettings.colorBy;
 // Guard against layouts removed in a later version (e.g. 'grid', 'circle').
 if (!['cose', 'concentric', 'breadthfirst'].includes(savedSettings.layout)) savedSettings.layout = defaultSettings.layout;
 if (!Number.isFinite(savedSettings.notePanelWidth)) savedSettings.notePanelWidth = defaultSettings.notePanelWidth;

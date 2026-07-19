@@ -13,6 +13,7 @@ import VaultBridgeModal from './components/VaultBridgeModal';
 import ShortcutsModal from './components/ShortcutsModal';
 import * as vault from './lib/vault';
 import { restoreSliver } from './lib/sliver';
+import { seedDemoIfEnabled } from './lib/demo';
 import { emit } from './lib/bus';
 
 export default function App() {
@@ -44,6 +45,11 @@ export default function App() {
   // Reconnect to the Sliver bridge if it was enabled last session.
   useEffect(() => {
     restoreSliver();
+  }, []);
+
+  // Hosted demo build (VITE_DEMO=1): stage a sample engagement on first load.
+  useEffect(() => {
+    void seedDemoIfEnabled();
   }, []);
 
   // Keyboard shortcuts: Esc closes the open modal, / search, f fit, e edit toggle.
