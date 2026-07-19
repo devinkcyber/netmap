@@ -51,6 +51,16 @@ bridge/                  optional read-only Go bridge to a Sliver C2 server (see
   preserved byte-for-byte. This is covered by `src/lib/vault.test.ts`.
 - **Export is PNG** (2× scale, theme background). SVG export needs the unmaintained
   `cytoscape-svg` plugin; noted as a possible add.
+- **Credential vault: standard WebCrypto primitives, no custom crypto.** The AD
+  list is sealed with AES-256-GCM under a PBKDF2-HMAC-SHA256 key (600k iterations,
+  per-blob random salt, fresh IV per write); the key is non-extractable and held
+  in memory only. PBKDF2 is used over the stronger memory-hard Argon2id/scrypt
+  deliberately: WebCrypto ships no native Argon2, and pulling in a WASM KDF to
+  gain memory-hardness wasn't worth the bundle and supply-chain cost for a local
+  tool whose realistic threat is an offline crack of a stolen `localStorage` blob
+  — PBKDF2 at OWASP's iteration floor covers that. The iteration count is stored
+  in each blob, so it can be raised later without breaking existing lists. Covered
+  by `src/lib/credvault.test.ts`.
 - **The Sliver overlay is read-only by construction.** The bridge exposes no
   implant-interaction endpoints, binds to loopback only, requires a bearer token,
   allowlists a single browser origin, and rejects non-loopback Host headers

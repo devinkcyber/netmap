@@ -133,16 +133,32 @@ client-side and offline: scan data lives in `localStorage` (skipped if very larg
 and never leaves the machine, and note previews are sanitized with DOMPurify.
 
 Credentials you enter (AD passwords) are **always encrypted at rest behind a
-passphrase**. You set one the first time you open the Users panel and unlock the
-list once per session; encryption is AES-GCM with a key derived via PBKDF2-SHA256
-and held in memory only (a browser restart re-locks it). There is no plaintext
-storage path. Saving the list to `AD Users.md` in your vault, or exporting to
-.txt/.csv, is an explicit **plaintext** export — treat the browser profile and the
-vault as sensitive engagement data and protect them accordingly.
+passphrase** — there is no plaintext storage path. Concretely, the list is sealed
+with **AES-256-GCM** (authenticated encryption) under a key derived from your
+passphrase with **PBKDF2-HMAC-SHA256 at 600,000 iterations** (OWASP's current
+floor), a random 16-byte salt, and a fresh random IV on every write. The key is
+non-extractable and lives in memory only: you unlock once per session, and a
+browser restart re-locks it. All of this runs through the WebCrypto API — no
+hand-rolled crypto. See [`src/lib/credvault.ts`](src/lib/credvault.ts).
 
-> Encryption uses the WebCrypto API, which requires a secure context —
-> `http://localhost` (the dev/preview server) or HTTPS. There is **no passphrase
-> recovery**: if you forget it, the encrypted list can't be read.
+**Threat model — what this does and doesn't cover:**
+
+- **Protects against** disclosure of the credential blob *at rest*: another
+  process or user reading `localStorage`, a stolen or copied browser profile, or
+  a synced/backed-up disk. Without the passphrase the blob is unreadable, and
+  there is **no passphrase recovery** — forget it and the list is gone.
+- **Does not protect against** a workstation that is already compromised *while
+  the vault is unlocked* (the decrypted list is then in page memory), or the
+  explicit **plaintext** exports — saving to `AD Users.md` in your vault or to
+  `.txt`/`.csv`. This is inherent to any client-side tool; the compensating
+  controls are that netmap is offline by design and ships a strict CSP, sanitizes
+  note previews with DOMPurify, and blocks remote images as an anti-exfiltration
+  measure. Treat the browser profile and the vault as sensitive engagement data.
+
+> Passphrase strength is on you — PBKDF2 only buys time against an offline
+> attacker who already has the blob, so a weak passphrase undoes it. WebCrypto
+> also requires a secure context: `http://localhost` (the dev/preview server) or
+> HTTPS.
 
 ## License
 

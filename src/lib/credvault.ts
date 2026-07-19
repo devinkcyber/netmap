@@ -16,7 +16,11 @@ import type { UserCred } from '../types';
 
 const BLOB_KEY = 'netmap:users:enc'; // encrypted credential blob
 const PLAIN_KEY = 'netmap:users'; // legacy/unprotected plaintext list (same key the store uses)
-const ITERATIONS = 250_000;
+// PBKDF2-HMAC-SHA256 work factor. 600k matches OWASP's current guidance; the
+// count is stored in each blob (`iter`), so it can be raised again later without
+// breaking already-encrypted lists — they decrypt at whatever count they were
+// written with.
+const ITERATIONS = 600_000;
 const SALT_BYTES = 16;
 const IV_BYTES = 12;
 
