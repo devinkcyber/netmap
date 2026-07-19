@@ -71,10 +71,9 @@ shows fewer columns.
 - **Recon workflow** — per-host review status (unreviewed / reviewed / owned)
   shown as node rings and filterable; rich filters (subnet, OS family,
   port/service, note status); a live color-by legend.
-- **Credentials** — import `user.txt` / `user:pass` lists, assign passwords and a
-  target host, export to txt/csv; matched credentials surface on the host and get
-  a 🔑 on the graph. The list is **encrypted at rest behind a passphrase** (see
-  Security below).
+- **Credentials** — build an AD credential list, tie each entry to a target host,
+  and see matches marked with a 🔑 on the graph; the list is encrypted at rest
+  behind a passphrase (see [Users & credentials](#users--credentials)).
 - **BloodHound CE deep-links** — jump from a host to its node in BloodHound by
   object ID (SID), with a name-based Cypher fallback.
 - **Manual overrides & persistence** — right-click a host to flag a Ligolo pivot
@@ -159,6 +158,37 @@ implant-interaction endpoints at all, binds to loopback, requires a bearer token
 allowlists a single browser origin, and rejects non-loopback `Host` headers (a
 DNS-rebinding defense). Setup and the full security model are in
 [`bridge/README.md`](bridge/README.md).
+
+## Users & credentials
+
+<!-- GIF: add docs/credentials.gif, then uncomment the line below -->
+<!-- ![Importing a user list, assigning passwords and a target host, and the 🔑 marker appearing on the matched host](docs/credentials.gif) -->
+
+netmap keeps the account credentials you gather during an engagement next to the
+hosts they belong to. Open the **AD users & credentials** panel to build the list,
+tie each credential to a target, and watch matches light up on the map.
+
+- **Import** a `user.txt` (or paste usernames, one per line). Each non-`#` line is
+  a username with an optional password after the first `:`, `,`, or tab — so both
+  plain `user.txt` lists and `user:pass` dumps import cleanly. Re-importing is
+  idempotent: existing usernames (case-insensitive) are kept, so a fresh dump never
+  clobbers passwords you've already filled in.
+- **Assign** passwords and a **target host** in an inline table (passwords masked by
+  default, with a "Show passwords" toggle). The Host field takes an IP or hostname
+  and is what ties a credential to a node.
+- **See it on the graph** — a credential whose host matches a scanned node (by IP,
+  full hostname, or short pre-dot name) surfaces on that host and marks the node
+  with a 🔑, so "where do I already have creds?" is answerable at a glance. Matching
+  lives in [`src/lib/creds.ts`](src/lib/creds.ts).
+- **Encrypted at rest, always** — the first time you open the panel you set a
+  passphrase, and the list is only ever persisted encrypted (AES-256-GCM). You
+  unlock it once per session and can **Lock** to drop the in-memory key on demand;
+  there is no plaintext storage path and no passphrase recovery. See
+  [Security & privacy](#security--privacy) for the full crypto and threat model.
+- **Export / vault sync** — download usernames as `user.txt` or the full list as
+  CSV (`username,password,host`), or sync it to your Obsidian vault as an
+  `AD Users.md` table (and load it back). These exports are deliberate, **plaintext**
+  output — netmap confirms before writing credentials to the vault.
 
 ## Keyboard & mouse
 
