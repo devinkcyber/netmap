@@ -48,8 +48,16 @@ export default function ImportModal() {
   }
 
   async function loadSample() {
-    const res = await fetch('/sample-scan.xml');
-    ingest(await res.text());
+    setError(null);
+    try {
+      // BASE_URL respects the deploy sub-path (e.g. `/netmap/` on GitHub Pages),
+      // so the sample resolves under the app base rather than the domain root.
+      const res = await fetch(`${import.meta.env.BASE_URL}sample-scan.xml`);
+      if (!res.ok) throw new Error(`Could not load the sample scan (HTTP ${res.status}).`);
+      ingest(await res.text());
+    } catch (e) {
+      setError((e as Error).message);
+    }
   }
 
   return (
