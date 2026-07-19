@@ -28,6 +28,9 @@ function demoImplants(): SliverImplant[] {
     { id: 'demo-dc01', kind: 'session', name: 'AMBER_KEEP', hostname: 'dc01.corp.lan', username: 'CORP\\Administrator', os: 'windows', arch: 'amd64', transport: 'mtls', remoteAddress: '10.30.10.5:51821', pid: 680, version: '', integrity: 'System', isDead: false, lastCheckin: now - 9 },
     // Service-account beacon on the SQL host.
     { id: 'demo-sql01', kind: 'beacon', name: 'QUIET_FALCON', hostname: 'sql01.corp.lan', username: 'CORP\\svc_sql', os: 'windows', arch: 'amd64', transport: 'https', remoteAddress: '10.30.10.15:44113', pid: 8324, version: '', integrity: 'High', isDead: false, lastCheckin: now - 12, interval: 60, jitter: 10, nextCheckin: now + 48 },
+    // Fast-checking beacon (5s interval) — its countdown ring sweeps a full loop
+    // every few seconds, so a short screen recording captures the whole animation.
+    { id: 'demo-exch01', kind: 'beacon', name: 'SWIFT_EMBER', hostname: 'exch01.corp.lan', username: 'CORP\\svc_exchange', os: 'windows', arch: 'amd64', transport: 'https', remoteAddress: '10.30.10.20:44116', pid: 6612, version: '', integrity: 'High', isDead: false, lastCheckin: now - 1, interval: 5, jitter: 1, nextCheckin: now + 4 },
     // Lateral hop through the mgmt jumpbox.
     { id: 'demo-jump', kind: 'beacon', name: 'RUSTY_ANCHOR', hostname: 'jumpbox.mgmt.lan', username: 'root', os: 'linux', arch: 'amd64', transport: 'https', remoteAddress: '10.10.0.10:44114', pid: 2231, version: '', integrity: '', isDead: false, lastCheckin: now - 30, interval: 120, jitter: 20, nextCheckin: now + 90 },
     // Initial DMZ foothold.
