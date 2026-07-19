@@ -15,7 +15,9 @@ client-side and offline.
 Built for pentesters and red-teamers who live in nmap + Obsidian and want their
 recon to be visual and their notes one click away.
 
-![netmap — a traceroute topology of a demo network: subnet-colored hosts, gold-ringed domain controllers, router hops, and a Ligolo pivot path](docs/screenshot.png)
+![netmap rendering the demo network as an interactive traceroute topology — a scanner-rooted tree of hosts colored by subnet, with domain controllers, a Ligolo pivot path, and live Sliver implants](docs/map_shot.png)
+
+<sub>Hosts colored by subnet · gold-ringed hexagons are domain controllers · the dashed magenta path is a Ligolo pivot unlocking the `10.31.0.0/24` secure enclave · ringed nodes carry live Sliver sessions/beacons.</sub>
 
 ## Quick start
 
