@@ -61,10 +61,9 @@ shows fewer columns.
 - **Two topology models** — *traceroute* chains real hop paths into a tree (with
   router nodes for unscanned hops); *subnets* groups hosts under synthetic subnet
   nodes at a configurable mask.
-- **Obsidian notes in place** — click a host to read/edit its real vault `.md`.
-  Debounced autosave + `Ctrl/Cmd+S`, frontmatter and `[[wikilinks]]` preserved
-  byte-for-byte, paste-to-embed images, one-click note scaffolding from a
-  template, and bulk "notes for all hosts".
+- **Obsidian notes in place** — click a host to read and edit its real vault
+  `.md`; autosave, byte-for-byte frontmatter/`[[wikilink]]` preservation,
+  paste-to-embed images, and note scaffolding (see [Integrations](#integrations)).
 - **Active Directory awareness** — domain-controller detection from AD service
   fingerprints (gold-ringed hexagons), AD role + exposed AD services per host,
   and domain-based coloring that separates a child domain from its parent.
@@ -82,6 +81,85 @@ shows fewer columns.
   (📡) or force domain-controller status; node positions, the last scan, the vault
   handle, and all settings survive reloads.
 
+## Integrations
+
+netmap is glue between the tools you already run during an engagement — your
+Obsidian vault, a BloodHound CE instance, and (optionally) a live Sliver C2. Every
+integration is client-side and opt-in, and none of them phone home.
+
+### Obsidian — your vault, edited in place
+
+<!-- GIF: add docs/obsidian.gif, then uncomment the line below -->
+<!-- ![Selecting a host and editing its Obsidian note inline — live preview, wikilinks, autosave](docs/obsidian.gif) -->
+
+Click a host and its **real** vault note opens in the side panel. This isn't a
+copy or an import: netmap reads and writes the actual `.md` file on disk — through
+the browser's File System Access API on Chromium, or the `bridge-vault/` helper on
+Firefox/Safari — so anything you change is instantly in Obsidian, and edits you
+make in Obsidian show up here on the next index. Notes bind to hosts by
+frontmatter `ip:`/`host:`, falling back to a filename that is itself the IP.
+
+- **Editor + preview** — a raw-markdown textarea beside a rendered preview
+  (`marked` + DOMPurify); `e` toggles them, and edits autosave (debounced) or on
+  `Ctrl`/`Cmd+S`.
+- **Non-destructive writes** — when netmap updates a field (e.g. review `status:`),
+  it rewrites only that one frontmatter line. The rest of the note — other
+  frontmatter, the body, your `[[wikilinks]]` — is preserved byte-for-byte
+  (covered by `src/lib/vault.test.ts`).
+- **`[[wikilinks]]`** stay clickable in the preview, and **pasting an image** drops
+  it into the vault's `attachments/` folder and links it inline.
+- **Scaffolding** — one click stamps a host note from a template: frontmatter with
+  IP, hostnames, OS, AD role, a `bloodhound_id:` slot, and subnet/AD tags, plus a
+  pre-filled open-ports table. "Notes for all hosts" does it in bulk.
+- **Recon state lives in the vault** — per-host status (unreviewed / reviewed /
+  owned) is just the note's `status:` field, and it drives that node's ring on the
+  graph. Close the browser and your progress is still in your notes.
+
+### BloodHound CE — jump from a host to its graph node
+
+<!-- GIF: add docs/bloodhound.gif, then uncomment the line below -->
+<!-- ![Clicking through from a host in netmap to the same node in BloodHound CE](docs/bloodhound.gif) -->
+
+From any host, open its node directly in a running **BloodHound Community
+Edition** Explore view. netmap doesn't ingest BloodHound data — it builds a
+deep-link into your BHCE UI, two ways:
+
+- **Object-ID accurate** when the host note carries a `bloodhound_id:` (the node's
+  SID/GUID) in frontmatter — netmap builds the exact `primarySearch`-by-object-ID
+  URL that BHCE uses internally, so you land on precisely that node.
+- **Cypher fallback** without an object ID: because BHCE's `primarySearch` resolves
+  by object ID rather than name, netmap instead emits an Explore **Cypher**
+  deep-link (`MATCH (n:Base) WHERE toUpper(n.name) = "…"`, carried base64 in the
+  URL) that matches the node by its uppercased name — how BloodHound names
+  computers, e.g. `DC01.CORP.LAN`.
+
+The BHCE base URL is a **user-editable template** (a `{q}` placeholder), so it
+adapts to your BloodHound version and host. Logic lives in
+[`src/lib/bloodhound.ts`](src/lib/bloodhound.ts).
+
+### Sliver C2 — live implant overlay (optional)
+
+<!-- GIF: add docs/sliver.gif, then uncomment the line below -->
+<!-- ![Sliver sessions and beacons lighting up hosts on the map, with a live beacon check-in countdown](docs/sliver.gif) -->
+
+netmap can overlay live [Sliver](https://github.com/BishopFox/sliver) implant
+state onto the map: sessions and beacons light up the hosts they run on, and each
+beacon gets a check-in countdown that animates toward its next call-back. This is
+**entirely optional** — netmap is fully usable without it, and cloning this repo
+connects to nothing. No server handy? **"Load demo implants"** drops a sample
+session + beacon onto the current scan so the overlay can be shown off offline
+(handy for the GIF above).
+
+Because a browser can't speak Sliver's mTLS gRPC, a small **read-only,
+loopback-only** Go helper (`bridge/`) holds the operator credentials and exposes a
+JSON/WebSocket API netmap consumes — it pushes an authoritative snapshot on
+connect and again on every session/beacon change, so netmap never polls. The
+read-only scope is enforced **by construction**: the bridge has no
+implant-interaction endpoints at all, binds to loopback, requires a bearer token,
+allowlists a single browser origin, and rejects non-loopback `Host` headers (a
+DNS-rebinding defense). Setup and the full security model are in
+[`bridge/README.md`](bridge/README.md).
+
 ## Keyboard & mouse
 
 Press **`?`** in the app (or the `?` button in the toolbar) for the full list. The essentials:
@@ -95,19 +173,6 @@ Press **`?`** in the app (or the `?` button in the toolbar) for the full list. T
 | right-click a host | actions: mark DC, open in BloodHound, Ligolo pivot & unlocked subnets |
 | `e` · `Ctrl`/`Cmd`+`S` | toggle note edit/preview · save the note |
 | `Esc` | close a dialog / cancel linking |
-
-## Optional: live Sliver C2 overlay
-
-netmap can overlay live [Sliver](https://github.com/BishopFox/sliver) implant
-state onto the map — sessions and beacons light up the hosts they run on. This is
-**entirely optional**; netmap is fully usable without it, and cloning this repo
-does not connect to anything.
-
-Because a browser can't speak Sliver's mTLS gRPC, a small **read-only,
-loopback-only** Go helper (`bridge/`) holds the operator credentials and exposes a
-JSON/WebSocket API that netmap consumes. It has **no implant-interaction
-endpoints** — the read-only scope is enforced by their absence. Setup and the full
-security model are in [`bridge/README.md`](bridge/README.md).
 
 ## Building & hosting
 
