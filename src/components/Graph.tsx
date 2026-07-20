@@ -220,10 +220,9 @@ export default function Graph() {
   // (a subnet CIDR node's hosts in subnet view; a router/scanner's subtree in traceroute view).
   const shiftRef = useRef(false);
   const groupDragRef = useRef<{ id: string; group: NodeCollection; last: { x: number; y: number } } | null>(null);
-  // Shift+click a subnet/router node arms it for scroll-to-rotate: the wheel then spins that
-  // node's children (a subnet's hosts, a router's subtree) around it. Cleared on Esc, a
-  // background click, or selecting another node.
-  const rotatePivotRef = useRef<string | null>(null);
+  // Scroll-to-rotate: while a subnet/router node is selected, holding Shift and scrolling spins
+  // that node's children (a subnet's hosts, a router's subtree) around it instead of zooming.
+  // `rotating` drives the on-screen hint and mirrors "Shift held + a rotatable node selected".
   const [rotating, setRotating] = useState<{ id: string; label: string } | null>(null);
   // Link mode: while set to a pivot IP, the next subnet-node tap links it as that pivot's target.
   const linkFromRef = useRef<string | null>(null);
@@ -290,20 +289,10 @@ export default function Graph() {
         }
         return; // stay in link mode to toggle more subnets
       }
-      // Shift+click a subnet or router arms it for scroll-to-rotate (spin its children). A Shift
-      // *drag* still moves the group; only a click (no drag) arms rotation.
-      const shiftHeld = (e.originalEvent as MouseEvent | undefined)?.shiftKey ?? shiftRef.current;
-      if (shiftHeld && (kind === 'subnet' || kind === 'router')) {
-        rotatePivotRef.current = n.id() as string;
-        setRotating({ id: n.id() as string, label: (n.data('label') as string) || (n.id() as string) });
-        cy.userZoomingEnabled(false); // the wheel now rotates instead of zooming, until disarmed
-        select(n.id() as string);
-        return;
-      }
-      disarmRotate();
       // Every node is selectable — selecting one highlights its connected edges and opens its
       // pane. For a subnet that's the edges to its hosts; for the scanner/network hub, its links
       // to the first hops/subnets (matching what arrow-key navigation can already reach).
+      // A selected subnet/router becomes the pivot for Shift+scroll rotation (see onWheel).
       select(n.id() as string);
     });
     cy.on('tap', (e) => {
@@ -312,7 +301,6 @@ export default function Graph() {
           linkFromRef.current = null;
           setLinkFrom(null);
         }
-        disarmRotate();
         select(null);
       }
       setMenu(null);
@@ -381,18 +369,19 @@ export default function Graph() {
       groupDragRef.current = null; // save handled by the generic 'dragfree' on 'node'
     });
 
-    // Scroll-to-rotate: while a subnet/router is armed (Shift+click), the wheel spins its children
-    // around it instead of zooming (zoom is disabled on arm). Direction follows the wheel; the
-    // per-tick angle scales with the delta and is clamped so trackpads and mice both feel sane.
+    // Scroll-to-rotate: while a subnet/router node is selected, Shift+scroll spins its children
+    // around it instead of zooming (syncRotateLock disables zoom in exactly this state). Direction
+    // follows the wheel; the per-tick angle scales with the delta and is clamped so trackpads and
+    // mice both feel sane.
     let rotateSaveTimer: ReturnType<typeof setTimeout> | undefined;
     const onWheel = (ev: WheelEvent) => {
-      const pivotId = rotatePivotRef.current;
-      if (!pivotId) return; // not armed → let Cytoscape zoom normally
-      const pivot = cy.getElementById(pivotId);
-      if (pivot.empty()) {
-        disarmRotate();
-        return;
-      }
+      if (!ev.shiftKey) return; // no Shift → normal zoom
+      const sel = useStore.getState().selectedId;
+      if (!sel) return;
+      const pivot = cy.getElementById(sel);
+      if (pivot.empty()) return;
+      const kind = pivot.data('kind') as string;
+      if (kind !== 'subnet' && kind !== 'router') return; // only a CIDR/router's children rotate
       ev.preventDefault();
       const group = groupFor(pivot);
       if (group.empty()) return;
@@ -714,10 +703,10 @@ export default function Graph() {
     cyRef.current?.style(styles(theme));
   }, [theme]);
 
-  // Changing the topology view (mode/mask) rebuilds node ids, so any armed rotation pivot is
-  // stale — disarm and restore zoom.
+  // Changing the topology view (mode/mask) rebuilds node ids, so a selected subnet/router may no
+  // longer exist — re-evaluate the rotate lock so zoom is never left disabled.
   useEffect(() => {
-    disarmRotate();
+    syncRotateLock();
   }, [mode, mask]);
 
   // ---- filters ----
@@ -767,7 +756,8 @@ export default function Graph() {
   }
   useEffect(() => {
     if (cyRef.current) applySelection(cyRef.current, selectedId);
-     
+    syncRotateLock(); // selection changed → re-evaluate whether Shift+scroll should rotate
+
   }, [selectedId]);
 
   // ---- Ligolo pivot → unlocked subnet: highlight the target subnet + the pink tunnel path ----
@@ -840,10 +830,9 @@ export default function Graph() {
   // Keyboard: track Shift (for shift-drag group move) and arrow-key node navigation.
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Shift') shiftRef.current = true;
-      if (e.key === 'Escape' && rotatePivotRef.current) {
-        disarmRotate();
-        return;
+      if (e.key === 'Shift') {
+        shiftRef.current = true;
+        syncRotateLock(); // Shift down over a selected subnet/router → wheel now rotates
       }
       if (!ARROW_DIR[e.key]) return;
       const ae = document.activeElement as HTMLElement | null;
@@ -867,13 +856,23 @@ export default function Graph() {
       }
     }
     function onKeyUp(e: KeyboardEvent) {
-      if (e.key === 'Shift') shiftRef.current = false;
+      if (e.key === 'Shift') {
+        shiftRef.current = false;
+        syncRotateLock(); // Shift released → restore wheel zoom
+      }
+    }
+    // Losing focus can swallow the Shift keyup, which would leave zoom disabled — reset defensively.
+    function onBlur() {
+      shiftRef.current = false;
+      syncRotateLock();
     }
     window.addEventListener('keydown', onKeyDown);
     window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -894,11 +893,18 @@ export default function Graph() {
     saveJson(posKey(), pos);
   }
 
-  // Disarm scroll-to-rotate: forget the armed pivot, hide the hint, and restore wheel zoom.
-  function disarmRotate() {
-    rotatePivotRef.current = null;
-    setRotating(null);
-    cyRef.current?.userZoomingEnabled(true);
+  // Lock wheel-zoom (and show the rotate hint) exactly while Shift is held with a subnet/router
+  // selected — the state in which the wheel rotates the selection's children instead of zooming.
+  // Called whenever Shift or the selection changes, so zoom is never left disabled.
+  function syncRotateLock() {
+    const cy = cyRef.current;
+    if (!cy) return;
+    const sel = useStore.getState().selectedId;
+    const node = sel ? cy.getElementById(sel) : null;
+    const kind = node && node.nonempty() ? (node.data('kind') as string) : '';
+    const active = shiftRef.current && (kind === 'subnet' || kind === 'router');
+    cy.userZoomingEnabled(!active);
+    setRotating(active ? { id: sel as string, label: (node!.data('label') as string) || (sel as string) } : null);
   }
 
   // Nearest selectable node from `fromId` in an arrow-key direction: only nodes inside a 45° cone
@@ -1200,8 +1206,7 @@ export default function Graph() {
           className="absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-none border bg-panel px-3 py-1.5 text-xs text-ink-1 shadow-lg"
           style={{ borderColor: 'rgba(255,176,0,0.6)' }}
         >
-          Rotating <span className="font-mono">{rotating.label}</span>’s children · scroll to spin ·{' '}
-          <span className="text-ink-3">Esc or click away to stop</span>
+          Scroll to rotate <span className="font-mono">{rotating.label}</span>’s children around it
         </div>
       )}
     </div>
