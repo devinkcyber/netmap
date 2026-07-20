@@ -220,6 +220,11 @@ export default function Graph() {
   // (a subnet CIDR node's hosts in subnet view; a router/scanner's subtree in traceroute view).
   const shiftRef = useRef(false);
   const groupDragRef = useRef<{ id: string; group: NodeCollection; last: { x: number; y: number } } | null>(null);
+  // Shift+click a subnet/router node arms it for scroll-to-rotate: the wheel then spins that
+  // node's children (a subnet's hosts, a router's subtree) around it. Cleared on Esc, a
+  // background click, or selecting another node.
+  const rotatePivotRef = useRef<string | null>(null);
+  const [rotating, setRotating] = useState<{ id: string; label: string } | null>(null);
   // Link mode: while set to a pivot IP, the next subnet-node tap links it as that pivot's target.
   const linkFromRef = useRef<string | null>(null);
   const [linkFrom, setLinkFrom] = useState<string | null>(null);
@@ -285,6 +290,17 @@ export default function Graph() {
         }
         return; // stay in link mode to toggle more subnets
       }
+      // Shift+click a subnet or router arms it for scroll-to-rotate (spin its children). A Shift
+      // *drag* still moves the group; only a click (no drag) arms rotation.
+      const shiftHeld = (e.originalEvent as MouseEvent | undefined)?.shiftKey ?? shiftRef.current;
+      if (shiftHeld && (kind === 'subnet' || kind === 'router')) {
+        rotatePivotRef.current = n.id() as string;
+        setRotating({ id: n.id() as string, label: (n.data('label') as string) || (n.id() as string) });
+        cy.userZoomingEnabled(false); // the wheel now rotates instead of zooming, until disarmed
+        select(n.id() as string);
+        return;
+      }
+      disarmRotate();
       // Every node is selectable — selecting one highlights its connected edges and opens its
       // pane. For a subnet that's the edges to its hosts; for the scanner/network hub, its links
       // to the first hops/subnets (matching what arrow-key navigation can already reach).
@@ -296,6 +312,7 @@ export default function Graph() {
           linkFromRef.current = null;
           setLinkFrom(null);
         }
+        disarmRotate();
         select(null);
       }
       setMenu(null);
@@ -363,6 +380,40 @@ export default function Graph() {
     cy.on('dragfree', GROUP_DRAG_SELECTOR, () => {
       groupDragRef.current = null; // save handled by the generic 'dragfree' on 'node'
     });
+
+    // Scroll-to-rotate: while a subnet/router is armed (Shift+click), the wheel spins its children
+    // around it instead of zooming (zoom is disabled on arm). Direction follows the wheel; the
+    // per-tick angle scales with the delta and is clamped so trackpads and mice both feel sane.
+    let rotateSaveTimer: ReturnType<typeof setTimeout> | undefined;
+    const onWheel = (ev: WheelEvent) => {
+      const pivotId = rotatePivotRef.current;
+      if (!pivotId) return; // not armed → let Cytoscape zoom normally
+      const pivot = cy.getElementById(pivotId);
+      if (pivot.empty()) {
+        disarmRotate();
+        return;
+      }
+      ev.preventDefault();
+      const group = groupFor(pivot);
+      if (group.empty()) return;
+      const c = pivot.position();
+      const theta = Math.max(-0.2, Math.min(0.2, ev.deltaY * 0.0015)); // radians per tick, clamped
+      const cos = Math.cos(theta);
+      const sin = Math.sin(theta);
+      cy.batch(() => {
+        group.forEach((m) => {
+          const dx = m.position('x') - c.x;
+          const dy = m.position('y') - c.y;
+          m.position({ x: c.x + dx * cos - dy * sin, y: c.y + dx * sin + dy * cos });
+        });
+      });
+      setTooltip(null);
+      setMenu(null);
+      clearTimeout(rotateSaveTimer);
+      rotateSaveTimer = setTimeout(() => savePositions(cy), 300); // persist like a drag, debounced
+    };
+    const wheelEl = containerRef.current;
+    wheelEl?.addEventListener('wheel', onWheel, { passive: false });
 
     const offFit = on('fit', () => cy.animate({ fit: { eles: cy.elements(), padding: 60 }, duration: 250 }));
     const offReset = on('reset-layout', () => positionNodes(cy, true)); // re-run layout, discard drags
@@ -523,6 +574,8 @@ export default function Graph() {
     return () => {
       cancelAnimationFrame(overlayRafRef.current);
       overlayRunningRef.current = false;
+      wheelEl?.removeEventListener('wheel', onWheel);
+      clearTimeout(rotateSaveTimer);
       offFit();
       offReset();
       offFocus();
@@ -661,6 +714,12 @@ export default function Graph() {
     cyRef.current?.style(styles(theme));
   }, [theme]);
 
+  // Changing the topology view (mode/mask) rebuilds node ids, so any armed rotation pivot is
+  // stale — disarm and restore zoom.
+  useEffect(() => {
+    disarmRotate();
+  }, [mode, mask]);
+
   // ---- filters ----
   function applyFilters(cy: Core) {
     const { filters: f, mask: m, noteStatusByIp: statusMap, sliverImplants: imps, sliverMatchOverride: ov } = useStore.getState();
@@ -782,6 +841,10 @@ export default function Graph() {
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Shift') shiftRef.current = true;
+      if (e.key === 'Escape' && rotatePivotRef.current) {
+        disarmRotate();
+        return;
+      }
       if (!ARROW_DIR[e.key]) return;
       const ae = document.activeElement as HTMLElement | null;
       if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT' || ae.isContentEditable)) return;
@@ -829,6 +892,13 @@ export default function Graph() {
       pos[n.id()] = { x: n.position('x'), y: n.position('y') };
     });
     saveJson(posKey(), pos);
+  }
+
+  // Disarm scroll-to-rotate: forget the armed pivot, hide the hint, and restore wheel zoom.
+  function disarmRotate() {
+    rotatePivotRef.current = null;
+    setRotating(null);
+    cyRef.current?.userZoomingEnabled(true);
   }
 
   // Nearest selectable node from `fromId` in an arrow-key direction: only nodes inside a 45° cone
@@ -1123,6 +1193,15 @@ export default function Graph() {
           <span className="font-mono">{linkFrom}</span> unlocks
           {ligoloTargetByIp[linkFrom]?.length ? ` (${ligoloTargetByIp[linkFrom].length} linked)` : ''} · click again to
           remove · <span className="text-ink-3">Esc when done</span>
+        </div>
+      )}
+      {rotating && !linkFrom && (
+        <div
+          className="absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-none border bg-panel px-3 py-1.5 text-xs text-ink-1 shadow-lg"
+          style={{ borderColor: 'rgba(255,176,0,0.6)' }}
+        >
+          Rotating <span className="font-mono">{rotating.label}</span>’s children · scroll to spin ·{' '}
+          <span className="text-ink-3">Esc or click away to stop</span>
         </div>
       )}
     </div>

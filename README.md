@@ -205,6 +205,7 @@ Press **`?`** in the app (or the `?` button in the toolbar) for the full list. T
 | `f` | fit the whole graph to the screen |
 | `↑ ↓ ← →` | move the selection to the next node |
 | `Shift` + drag | move a group — a subnet's hosts, a router's subtree, or the scanner's first hops |
+| `Shift` + click a subnet/router, then scroll | rotate its children around it — scroll direction sets clockwise / counter-clockwise |
 | right-click a host | actions: mark DC, open in BloodHound, Ligolo pivot & unlocked subnets |
 | `e` · `Ctrl`/`Cmd`+`S` | toggle note edit/preview · save the note |
 | `Esc` | close a dialog / cancel linking |

@@ -71,6 +71,9 @@ export default function ShortcutsModal() {
             <Row keys={<><Key>Shift</Key><span className="text-ink-3">+ drag</span></>}>
               Move a group — a subnet's hosts, a router's subtree, or the scanner's first hops
             </Row>
+            <Row keys={<><Key>Shift</Key><span className="text-ink-3">+ click, scroll</span></>}>
+              Rotate a subnet or router's children around it — scroll to spin either way
+            </Row>
             <Row keys={<span className="text-ink-3">Right-click</span>}>
               Host actions — mark DC, open in BloodHound, Ligolo pivot &amp; unlocked subnets
             </Row>
