@@ -197,6 +197,8 @@ tie each credential to a target, and watch matches light up on the map.
 
 Press **`?`** in the app (or the `?` button in the toolbar) for the full list. The essentials:
 
+![Driving netmap from the keyboard — search, fit, and arrow-key navigation across the graph](docs/keybindings.gif)
+
 | input | action |
 | --- | --- |
 | `/` | focus search — jump to an IP, host, or service |
