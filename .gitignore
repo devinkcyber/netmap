@@ -28,8 +28,8 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
-# Claude Code — per-developer local settings (permissions etc.)
-.claude/settings.local.json
+# Claude Code — local config/session directory (keep out of a shared repo)
+.claude/
 
 # ---------------------------------------------------------------------------
 # Engagement data — this is a pentest tool. Keep real recon out of the repo.
