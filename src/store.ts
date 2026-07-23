@@ -3,7 +3,7 @@ import type { Host, ScanMeta, UserCred } from './types';
 import { osFamily, subnetOf } from './types';
 import type { ColorBy } from './lib/encodings';
 import { DEFAULT_BLOODHOUND_URL, LEGACY_BLOODHOUND_URL } from './lib/bloodhound';
-import { isDomainControllerByPorts, setDcOverrides } from './lib/ad';
+import { isDomainControllerByPorts, setDcOverrides, adRole, adDomain } from './lib/ad';
 import type { SliverImplant, SliverStatus } from './lib/sliver';
 import { loadJson, saveJson } from './lib/bus';
 import * as credvault from './lib/credvault';
@@ -18,12 +18,19 @@ export interface Filters {
   port: string; // number or service substring
   status: string | null; // note frontmatter status
   sliver: string | null; // live Sliver implant state: 'any' | 'session' | 'beacon' | 'none'
+  adRole: string | null; // AD role: 'Domain Controller' | 'AD Member' | 'Non-AD'
+  domain: string | null; // AD/DNS domain (adDomain)
+  ligolo: boolean; // only hosts flagged as a Ligolo pivot
+  cred: boolean; // only hosts with a matched credential
 }
 
-/** A host's live Sliver implant presence, threaded into hostMatchesFilters. */
-export interface SliverPresence {
+/** Per-host booleans the matcher can't derive from the Host alone (live implants,
+ *  pivot flags, matched creds), computed by the caller and threaded in. */
+export interface HostFlags {
   session: boolean;
   beacon: boolean;
+  ligolo: boolean;
+  hasCred: boolean;
 }
 
 interface Settings {
@@ -79,7 +86,7 @@ const defaultSettings: Settings = {
   vaultBridgeToken: '',
 };
 
-const defaultFilters: Filters = { query: '', os: null, subnet: null, port: '', status: null, sliver: null };
+const defaultFilters: Filters = { query: '', os: null, subnet: null, port: '', status: null, sliver: null, adRole: null, domain: null, ligolo: false, cred: false };
 
 interface AppState extends Settings {
   hosts: Host[];
@@ -329,10 +336,14 @@ export function hostMatchesFilters(
   f: Filters,
   mask: number,
   statusByIp: Record<string, string>,
-  sliver: SliverPresence = { session: false, beacon: false },
+  flags: HostFlags = { session: false, beacon: false, ligolo: false, hasCred: false },
 ): boolean {
   if (f.os && osFamily(h.os) !== f.os) return false;
   if (f.subnet && subnetOf(h.ip, mask) !== f.subnet) return false;
+  if (f.adRole && adRole(h) !== f.adRole) return false;
+  if (f.domain && adDomain(h) !== f.domain) return false;
+  if (f.ligolo && !flags.ligolo) return false;
+  if (f.cred && !flags.hasCred) return false;
   if (f.port.trim()) {
     // Comma-separated terms are OR'd: "80,443" matches hosts with 80 OR 443 open.
     // Each term matches an open port by exact number or by service-name substring.
@@ -349,9 +360,9 @@ export function hostMatchesFilters(
     if (st !== f.status) return false;
   }
   if (f.sliver) {
-    const has = sliver.session || sliver.beacon;
-    if (f.sliver === 'session' && !sliver.session) return false;
-    if (f.sliver === 'beacon' && !sliver.beacon) return false;
+    const has = flags.session || flags.beacon;
+    if (f.sliver === 'session' && !flags.session) return false;
+    if (f.sliver === 'beacon' && !flags.beacon) return false;
     if (f.sliver === 'any' && !has) return false;
     if (f.sliver === 'none' && has) return false;
   }

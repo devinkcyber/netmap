@@ -721,14 +721,21 @@ export default function Graph() {
 
   // ---- filters ----
   function applyFilters(cy: Core) {
-    const { filters: f, mask: m, noteStatusByIp: statusMap, sliverImplants: imps, sliverMatchOverride: ov } = useStore.getState();
+    const s = useStore.getState();
+    const { filters: f, mask: m, noteStatusByIp: statusMap, sliverImplants: imps, sliverMatchOverride: ov } = s;
+    // Only resolve the extra per-host flags the matcher needs when their filter is active.
+    const credIps = f.cred ? hostsWithCreds(s.hosts, s.users) : new Set<string>();
     const visible = new Set<string>();
     cy.nodes('[kind = "host"]').forEach((n) => {
       const host = n.data('host') as Host;
-      // Only resolve live implants for the host when the Sliver filter is active.
       const live = f.sliver ? implantsForHost(host, imps, ov).filter((i) => !i.isDead) : [];
-      const sliver = { session: live.some((i) => i.kind === 'session'), beacon: live.some((i) => i.kind === 'beacon') };
-      if (hostMatchesFilters(host, f, m, statusMap, sliver)) visible.add(n.id());
+      const flags = {
+        session: live.some((i) => i.kind === 'session'),
+        beacon: live.some((i) => i.kind === 'beacon'),
+        ligolo: !!s.ligoloByIp[host.ip],
+        hasCred: credIps.has(host.ip),
+      };
+      if (hostMatchesFilters(host, f, m, statusMap, flags)) visible.add(n.id());
     });
     cy.startBatch();
     cy.nodes().forEach((n) => {
@@ -749,9 +756,9 @@ export default function Graph() {
   }
   useEffect(() => {
     if (cyRef.current) applyFilters(cyRef.current);
-    // Re-apply when implants change so the Sliver filter tracks live sessions/beacons.
-     
-  }, [filters, noteStatusByIp, sliverImplants, sliverMatchOverride]);
+    // Re-apply when implants / pivots / creds change so those filters track live state.
+
+  }, [filters, noteStatusByIp, sliverImplants, sliverMatchOverride, ligoloByIp, users]);
 
   // ---- selection highlight ----
   function applySelection(cy: Core, id: string | null) {

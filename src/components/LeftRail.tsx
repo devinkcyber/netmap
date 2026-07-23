@@ -3,6 +3,7 @@ import { useStore, subnetsOf, hostMatchesFilters } from '../store';
 import { OS_COLORS, AD_COLORS, DOMAIN_COLORS, SUBNET_COLORS, STATUS_COLORS } from '../lib/encodings';
 import { domainsOf, type AdRole } from '../lib/ad';
 import { implantsForHost } from '../lib/sliver';
+import { hostsWithCreds } from '../lib/creds';
 import { osFamily, type OsFamily } from '../types';
 import * as vault from '../lib/vault';
 
@@ -31,21 +32,41 @@ function FiltersBlock() {
   const noteStatusByIp = useStore((s) => s.noteStatusByIp);
   const sliverImplants = useStore((s) => s.sliverImplants);
   const sliverMatchOverride = useStore((s) => s.sliverMatchOverride);
+  const ligoloByIp = useStore((s) => s.ligoloByIp);
+  const users = useStore((s) => s.users);
 
   const families = useMemo(() => [...new Set(hosts.map((h) => osFamily(h.os)))].sort(), [hosts]);
   const subnets = useMemo(() => subnetsOf(hosts, mask), [hosts, mask]);
   const statuses = useMemo(() => [...new Set(Object.values(noteStatusByIp))].sort(), [noteStatusByIp]);
 
   // Hosts passing the current filters — the same predicate the graph fades on.
-  const visible = useMemo(
-    () =>
-      hosts.filter((h) => {
-        const live = filters.sliver ? implantsForHost(h, sliverImplants, sliverMatchOverride).filter((i) => !i.isDead) : [];
-        const sliver = { session: live.some((i) => i.kind === 'session'), beacon: live.some((i) => i.kind === 'beacon') };
-        return hostMatchesFilters(h, filters, mask, noteStatusByIp, sliver);
-      }),
-    [hosts, filters, mask, noteStatusByIp, sliverImplants, sliverMatchOverride],
+  const visible = useMemo(() => {
+    const credIps = filters.cred ? hostsWithCreds(hosts, users) : new Set<string>();
+    return hosts.filter((h) => {
+      const live = filters.sliver ? implantsForHost(h, sliverImplants, sliverMatchOverride).filter((i) => !i.isDead) : [];
+      const flags = {
+        session: live.some((i) => i.kind === 'session'),
+        beacon: live.some((i) => i.kind === 'beacon'),
+        ligolo: !!ligoloByIp[h.ip],
+        hasCred: credIps.has(h.ip),
+      };
+      return hostMatchesFilters(h, filters, mask, noteStatusByIp, flags);
+    });
+  }, [hosts, filters, mask, noteStatusByIp, sliverImplants, sliverMatchOverride, ligoloByIp, users]);
+
+  const anyActive = !!(
+    filters.subnet ||
+    filters.os ||
+    filters.adRole ||
+    filters.domain ||
+    filters.port.trim() ||
+    filters.status ||
+    filters.sliver ||
+    filters.ligolo ||
+    filters.cred
   );
+  const clearFilters = () =>
+    setFilters({ subnet: null, os: null, adRole: null, domain: null, port: '', status: null, sliver: null, ligolo: false, cred: false });
 
   function exportTargets() {
     const body = visible.map((h) => h.ip).join('\n') + '\n';
@@ -59,7 +80,14 @@ function FiltersBlock() {
 
   return (
     <section>
-      <SectionTitle>Filters</SectionTitle>
+      <div className="mb-2 flex items-baseline justify-between">
+        <h3 className="text-[12px] font-semibold uppercase tracking-wider text-ink-3">Filters</h3>
+        {anyActive && (
+          <button className="text-[11px] text-ink-3 hover:text-ink-1" onClick={clearFilters} title="Clear all active filters">
+            Clear
+          </button>
+        )}
+      </div>
       <div className="space-y-2.5">
         <select className="select w-full" value={filters.subnet ?? ''} onChange={(e) => setFilters({ subnet: e.target.value || null })}>
           <option value="">All subnets</option>
@@ -158,16 +186,40 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
+// A legend row: a clickable filter toggle when `onClick` is given, otherwise a static key entry.
+function SymRow({ active, onClick, title, children }: { active?: boolean; onClick?: () => void; title?: string; children: React.ReactNode }) {
+  if (!onClick) return <li className="flex items-center gap-2 text-xs text-ink-3">{children}</li>;
+  return (
+    <li>
+      <button
+        onClick={onClick}
+        title={title}
+        className={`flex w-full items-center gap-2 text-left text-xs ${active ? 'font-semibold text-ink-1' : 'text-ink-3 hover:text-ink-1'}`}
+      >
+        {children}
+      </button>
+    </li>
+  );
+}
+
 function Legend() {
   const colorBy = useStore((s) => s.colorBy);
   const hosts = useStore((s) => s.hosts);
   const mask = useStore((s) => s.mask);
   const filters = useStore((s) => s.filters);
   const setFilters = useStore((s) => s.setFilters);
-  // The colour legend doubles as a filter when colouring by subnet or OS family — the two encodings
-  // that have a matching filter. AD-role / domain colouring has no filter, so those stay display-only.
-  const filterKey: 'subnet' | 'os' | null = colorBy === 'subnet' ? 'subnet' : colorBy === 'os' ? 'os' : null;
-  const activeColorVal = filterKey === 'subnet' ? filters.subnet : filterKey === 'os' ? filters.os : null;
+  // The colour legend doubles as a filter: clicking a swatch toggles the matching filter for the
+  // current encoding (subnet / OS family / AD role / AD domain).
+  const colorFilterKey: 'subnet' | 'os' | 'adRole' | 'domain' =
+    colorBy === 'os' ? 'os' : colorBy === 'ad' ? 'adRole' : colorBy === 'domain' ? 'domain' : 'subnet';
+  const activeColorVal =
+    colorFilterKey === 'os' ? filters.os : colorFilterKey === 'adRole' ? filters.adRole : colorFilterKey === 'domain' ? filters.domain : filters.subnet;
+  const setColorFilter = (val: string | null) => {
+    if (colorFilterKey === 'os') setFilters({ os: val });
+    else if (colorFilterKey === 'adRole') setFilters({ adRole: val });
+    else if (colorFilterKey === 'domain') setFilters({ domain: val });
+    else setFilters({ subnet: val });
+  };
 
   let items: { label: string; color: string }[] = [];
   if (colorBy === 'os') {
@@ -186,58 +238,58 @@ function Legend() {
       <SectionTitle>Legend</SectionTitle>
       <ul className="space-y-1.5">
         {items.map((it) => {
-          const active = !!filterKey && activeColorVal === it.label;
-          const swatch = <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: it.color }} />;
-          const label = <span className="truncate font-mono">{it.label}</span>;
+          const active = activeColorVal === it.label;
           return (
             <li key={it.label}>
-              {filterKey ? (
-                <button
-                  onClick={() => {
-                    const next = active ? null : it.label;
-                    if (filterKey === 'subnet') setFilters({ subnet: next });
-                    else setFilters({ os: next });
-                  }}
-                  className={`flex w-full items-center gap-2 text-left text-xs ${active ? 'font-semibold text-ink-1' : 'text-ink-2 hover:text-ink-1'}`}
-                  title={active ? `Clear ${it.label} filter` : `Filter to ${it.label}`}
-                >
-                  {swatch}
-                  {label}
-                </button>
-              ) : (
-                <div className="flex items-center gap-2 text-xs text-ink-2">
-                  {swatch}
-                  {label}
-                </div>
-              )}
+              <button
+                onClick={() => setColorFilter(active ? null : it.label)}
+                className={`flex w-full items-center gap-2 text-left text-xs ${active ? 'font-semibold text-ink-1' : 'text-ink-2 hover:text-ink-1'}`}
+                title={active ? `Clear ${it.label} filter` : `Filter to ${it.label}`}
+              >
+                <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: it.color }} />
+                <span className="truncate font-mono">{it.label}</span>
+              </button>
             </li>
           );
         })}
-        <li className="flex items-center gap-2 pt-1 text-xs text-ink-3">
+        <li className="my-1 border-t border-line/60" aria-hidden />
+        <SymRow
+          active={filters.adRole === 'Domain Controller'}
+          onClick={() => setFilters({ adRole: filters.adRole === 'Domain Controller' ? null : 'Domain Controller' })}
+          title="Filter to domain controllers"
+        >
           <svg className="shrink-0" width="19" height="19" viewBox="0 0 13 13">
             <polygon points="6.5,1 11.26,3.75 11.26,9.25 6.5,12 1.74,9.25 1.74,3.75" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
           </svg>
           domain controller
-        </li>
-        <li className="flex items-center gap-2 text-xs text-ink-3">
+        </SymRow>
+        <SymRow active={filters.ligolo} onClick={() => setFilters({ ligolo: !filters.ligolo })} title="Filter to Ligolo pivots">
           <span className="w-5 shrink-0 text-center font-mono text-[16px] font-bold leading-none" style={{ color: '#e879c7' }}>›‹</span> ligolo pivot 📡
-        </li>
-        <li className="flex items-center gap-2 text-xs text-ink-3">
+        </SymRow>
+        <SymRow>
           <svg className="shrink-0" width="20" height="19" viewBox="0 0 14 13">
             <line x1="1" y1="6.5" x2="13" y2="6.5" stroke="#e879c7" strokeWidth="2.5" strokeDasharray="3 2" />
           </svg>
           path to unlocked subnet
-        </li>
-        <li className="flex items-center gap-2 text-xs text-ink-3">
+        </SymRow>
+        <SymRow active={filters.cred} onClick={() => setFilters({ cred: !filters.cred })} title="Filter to hosts with a matched credential">
           <span className="w-5 shrink-0 text-center text-base">🔑</span> credential on host
-        </li>
-        <li className="flex items-center gap-2 text-xs text-ink-3">
+        </SymRow>
+        <SymRow
+          active={filters.sliver === 'session'}
+          onClick={() => setFilters({ sliver: filters.sliver === 'session' ? null : 'session' })}
+          title="Filter to hosts with a live Sliver session"
+        >
           <svg className="shrink-0" width="19" height="19" viewBox="0 0 13 13">
             <circle cx="6.5" cy="6.5" r="4.75" fill="none" stroke="#5cc8ff" strokeWidth="1.5" />
           </svg>
           sliver session
-        </li>
-        <li className="flex items-center gap-2 text-xs text-ink-3">
+        </SymRow>
+        <SymRow
+          active={filters.sliver === 'beacon'}
+          onClick={() => setFilters({ sliver: filters.sliver === 'beacon' ? null : 'beacon' })}
+          title="Filter to hosts with a live Sliver beacon"
+        >
           {/* Animated to match the graph's beacon ring: a bright arc filling clockwise from 12 o'clock, then resetting. */}
           <svg className="shrink-0" width="19" height="19" viewBox="0 0 13 13">
             <circle cx="6.5" cy="6.5" r="4.75" fill="none" stroke="rgba(92,200,255,0.25)" strokeWidth="1.5" />
@@ -256,10 +308,10 @@ function Legend() {
             </circle>
           </svg>
           sliver beacon
-        </li>
-        <li className="flex items-center gap-2 text-xs text-ink-3">
+        </SymRow>
+        <SymRow>
           <span className="h-2 w-3 shrink-0 rotate-45 bg-ink-3/60" style={{ width: 16, height: 16 }} /> router / hop
-        </li>
+        </SymRow>
       </ul>
       <div className="mt-3">
         <SectionTitle>Note status ring</SectionTitle>
