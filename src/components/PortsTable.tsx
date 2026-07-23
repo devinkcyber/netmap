@@ -4,6 +4,19 @@ import { AD_PORTS } from '../lib/ad';
 
 type Col = 'number' | 'protocol' | 'state' | 'service' | 'product';
 
+// A browsable URL for an open web port, or null. HTTPS is inferred from the service
+// name (http s/ssl) or well-known TLS ports; everything else http-ish stays plain http.
+// IPv6 literals are bracketed so the URL is valid.
+function webUrl(ip: string, p: Port): string | null {
+  if (p.state !== 'open') return null;
+  const svc = (p.service ?? '').toLowerCase();
+  const https = /https|ssl/.test(svc) || p.number === 443 || p.number === 8443;
+  const http = !https && (/http/.test(svc) || [80, 8080, 8000, 8008, 8888, 3000].includes(p.number));
+  if (!https && !http) return null;
+  const host = ip.includes(':') ? `[${ip}]` : ip;
+  return `${https ? 'https' : 'http'}://${host}:${p.number}`;
+}
+
 export default function PortsTable({ host }: { host: Host }) {
   const [sort, setSort] = useState<{ col: Col; dir: 1 | -1 }>({ col: 'number', dir: 1 });
 
@@ -62,7 +75,17 @@ export default function PortsTable({ host }: { host: Host }) {
           {rows.map((p) => (
             <tr key={`${p.protocol}-${p.number}`} className="border-b border-line/50 hover:bg-raise/50">
               <td className="px-2 py-1.5 text-ink-1">
-                {p.number}
+                {(() => {
+                  const url = webUrl(host.ip, p);
+                  return url ? (
+                    <a href={url} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline" title={`Open ${url}`}>
+                      {p.number}
+                      <span className="ml-0.5 text-[9px] align-super">↗</span>
+                    </a>
+                  ) : (
+                    p.number
+                  );
+                })()}
                 {p.state === 'open' && AD_PORTS[p.number] && (
                   <span className="ml-1 text-warn" title={`Active Directory service: ${AD_PORTS[p.number]}`}>
                     ✦

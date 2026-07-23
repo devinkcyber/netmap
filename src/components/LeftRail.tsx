@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
-import { useStore, subnetsOf } from '../store';
+import { useStore, subnetsOf, hostMatchesFilters } from '../store';
 import { OS_COLORS, AD_COLORS, DOMAIN_COLORS, SUBNET_COLORS, STATUS_COLORS } from '../lib/encodings';
 import { domainsOf, type AdRole } from '../lib/ad';
+import { implantsForHost } from '../lib/sliver';
 import { osFamily, type OsFamily } from '../types';
 import * as vault from '../lib/vault';
 
@@ -29,10 +30,32 @@ function FiltersBlock() {
   const setFilters = useStore((s) => s.setFilters);
   const noteStatusByIp = useStore((s) => s.noteStatusByIp);
   const sliverImplants = useStore((s) => s.sliverImplants);
+  const sliverMatchOverride = useStore((s) => s.sliverMatchOverride);
 
   const families = useMemo(() => [...new Set(hosts.map((h) => osFamily(h.os)))].sort(), [hosts]);
   const subnets = useMemo(() => subnetsOf(hosts, mask), [hosts, mask]);
   const statuses = useMemo(() => [...new Set(Object.values(noteStatusByIp))].sort(), [noteStatusByIp]);
+
+  // Hosts passing the current filters — the same predicate the graph fades on.
+  const visible = useMemo(
+    () =>
+      hosts.filter((h) => {
+        const live = filters.sliver ? implantsForHost(h, sliverImplants, sliverMatchOverride).filter((i) => !i.isDead) : [];
+        const sliver = { session: live.some((i) => i.kind === 'session'), beacon: live.some((i) => i.kind === 'beacon') };
+        return hostMatchesFilters(h, filters, mask, noteStatusByIp, sliver);
+      }),
+    [hosts, filters, mask, noteStatusByIp, sliverImplants, sliverMatchOverride],
+  );
+
+  function exportTargets() {
+    const body = visible.map((h) => h.ip).join('\n') + '\n';
+    const url = URL.createObjectURL(new Blob([body], { type: 'text/plain;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'targets.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <section>
@@ -82,6 +105,14 @@ function FiltersBlock() {
             <option value="none">No implant</option>
           </select>
         )}
+        <button
+          className="btn w-full"
+          onClick={exportTargets}
+          disabled={visible.length === 0}
+          title="Download the currently-visible IPs as a newline-separated target list"
+        >
+          Export {visible.length} target{visible.length === 1 ? '' : 's'}
+        </button>
       </div>
     </section>
   );
@@ -131,6 +162,12 @@ function Legend() {
   const colorBy = useStore((s) => s.colorBy);
   const hosts = useStore((s) => s.hosts);
   const mask = useStore((s) => s.mask);
+  const filters = useStore((s) => s.filters);
+  const setFilters = useStore((s) => s.setFilters);
+  // The colour legend doubles as a filter when colouring by subnet or OS family — the two encodings
+  // that have a matching filter. AD-role / domain colouring has no filter, so those stay display-only.
+  const filterKey: 'subnet' | 'os' | null = colorBy === 'subnet' ? 'subnet' : colorBy === 'os' ? 'os' : null;
+  const activeColorVal = filterKey === 'subnet' ? filters.subnet : filterKey === 'os' ? filters.os : null;
 
   let items: { label: string; color: string }[] = [];
   if (colorBy === 'os') {
@@ -148,12 +185,34 @@ function Legend() {
     <section>
       <SectionTitle>Legend</SectionTitle>
       <ul className="space-y-1.5">
-        {items.map((it) => (
-          <li key={it.label} className="flex items-center gap-2 text-xs text-ink-2">
-            <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: it.color }} />
-            <span className="truncate font-mono">{it.label}</span>
-          </li>
-        ))}
+        {items.map((it) => {
+          const active = !!filterKey && activeColorVal === it.label;
+          const swatch = <span className="h-3.5 w-3.5 shrink-0 rounded-full" style={{ background: it.color }} />;
+          const label = <span className="truncate font-mono">{it.label}</span>;
+          return (
+            <li key={it.label}>
+              {filterKey ? (
+                <button
+                  onClick={() => {
+                    const next = active ? null : it.label;
+                    if (filterKey === 'subnet') setFilters({ subnet: next });
+                    else setFilters({ os: next });
+                  }}
+                  className={`flex w-full items-center gap-2 text-left text-xs ${active ? 'font-semibold text-ink-1' : 'text-ink-2 hover:text-ink-1'}`}
+                  title={active ? `Clear ${it.label} filter` : `Filter to ${it.label}`}
+                >
+                  {swatch}
+                  {label}
+                </button>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-ink-2">
+                  {swatch}
+                  {label}
+                </div>
+              )}
+            </li>
+          );
+        })}
         <li className="flex items-center gap-2 pt-1 text-xs text-ink-3">
           <svg className="shrink-0" width="19" height="19" viewBox="0 0 13 13">
             <polygon points="6.5,1 11.26,3.75 11.26,9.25 6.5,12 1.74,9.25 1.74,3.75" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
@@ -205,12 +264,21 @@ function Legend() {
       <div className="mt-3">
         <SectionTitle>Note status ring</SectionTitle>
         <ul className="space-y-1.5">
-          {Object.entries(STATUS_COLORS).map(([label, color]) => (
-            <li key={label} className="flex items-center gap-2 text-xs text-ink-2">
-              <span className="h-3.5 w-3.5 shrink-0 rounded-full border-2" style={{ borderColor: color }} />
-              <span className="font-mono">{label}</span>
-            </li>
-          ))}
+          {Object.entries(STATUS_COLORS).map(([label, color]) => {
+            const active = filters.status === label;
+            return (
+              <li key={label}>
+                <button
+                  onClick={() => setFilters({ status: active ? null : label })}
+                  className={`flex w-full items-center gap-2 text-left text-xs ${active ? 'font-semibold text-ink-1' : 'text-ink-2 hover:text-ink-1'}`}
+                  title={active ? `Clear ${label} filter` : `Filter to ${label}`}
+                >
+                  <span className="h-3.5 w-3.5 shrink-0 rounded-full border-2" style={{ borderColor: color }} />
+                  <span className="font-mono">{label}</span>
+                </button>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </section>

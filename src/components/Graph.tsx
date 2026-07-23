@@ -252,6 +252,16 @@ export default function Graph() {
   const bloodhoundUrl = useStore((s) => s.bloodhoundUrl);
   const noteBhIdByIp = useStore((s) => s.noteBhIdByIp);
   const select = useStore((s) => s.select);
+  const showToast = useStore((s) => s.showToast);
+
+  // Copy text to the clipboard (secure-context API) with a small confirmation toast.
+  function copyToClipboard(text: string, label: string) {
+    navigator.clipboard?.writeText(text).then(
+      () => showToast(`Copied ${label}`),
+      () => showToast('Copy failed — clipboard needs HTTPS or localhost'),
+    );
+    setMenu(null);
+  }
 
   // ---- init once ----
   useEffect(() => {
@@ -1111,6 +1121,33 @@ export default function Graph() {
           style={{ left: menu.x, top: menu.y }}
         >
           <div className="truncate px-3 py-1 font-mono text-[11px] text-ink-3">{menuHost ? displayName(menuHost) : menu.ip}</div>
+          <button
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-raise"
+            onClick={() => copyToClipboard(menu.ip, menu.ip)}
+          >
+            <span aria-hidden className="text-ink-3">⧉</span>
+            Copy IP
+          </button>
+          {menuHost && menuHost.hostnames.length > 0 && (
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-raise"
+              onClick={() => copyToClipboard(menuHost.hostnames[0], menuHost.hostnames[0])}
+            >
+              <span aria-hidden className="text-ink-3">⧉</span>
+              Copy hostname
+            </button>
+          )}
+          {menuHost && menuHost.hostnames.length > 0 && (
+            <button
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-raise"
+              onClick={() => copyToClipboard(`${menu.ip}\t${menuHost.hostnames[0]}`, 'hosts entry')}
+              title="Copy an /etc/hosts line: IP<tab>hostname"
+            >
+              <span aria-hidden className="text-ink-3">⧉</span>
+              Copy as hosts entry
+            </button>
+          )}
+          <div className="my-1 border-t border-line" />
           {menuHost && (
             <button
               className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-raise"
