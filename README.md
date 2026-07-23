@@ -4,6 +4,13 @@
 
 [![CI](https://github.com/devinkcyber/netmap/actions/workflows/ci.yml/badge.svg)](https://github.com/devinkcyber/netmap/actions/workflows/ci.yml)
 
+![React](https://img.shields.io/badge/React-20232A?logo=react&logoColor=61DAFB)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-646CFF?logo=vite&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white)
+![Cytoscape.js](https://img.shields.io/badge/Cytoscape.js-1A5B9E?logoColor=white)
+![Go](https://img.shields.io/badge/Go-00ADD8?logo=go&logoColor=white)
+
 **Turn an nmap scan into an interactive network map, with your Obsidian notes attached to every host.**
 
 Import an `nmap -oX` XML scan and netmap renders your network as an interactive
